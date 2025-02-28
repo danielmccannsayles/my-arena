@@ -47,7 +47,9 @@ def test_intersect_rays_1d(intersect_rays_1d):
 def test_intersect_rays_1d_special_case(intersect_rays_1d):
     import part1_ray_tracing.solutions as solutions
 
-    ray = t.tensor([[[0.0, 0.0, 0.0], [0.0, 1.0, 0.0]], [[0.0, 0.0, 0.0], [1.0, -10.0, 0.0]]])
+    ray = t.tensor(
+        [[[0.0, 0.0, 0.0], [0.0, 1.0, 0.0]], [[0.0, 0.0, 0.0], [1.0, -10.0, 0.0]]]
+    )
     segment = t.tensor(
         [
             [[0.0, 2.0, 2.0], [0.0, 4.0, 0.0]],
@@ -66,7 +68,13 @@ def test_triangle_ray_intersects(triangle_ray_intersects):
     A = t.tensor([2, 0.0, -1.0])
     B = t.tensor([2, -1.0, 0.0])
     C = t.tensor([2, 1.0, 1.0])
-    rays = t.tensor([[[0.0, 0.0, 0.0], [1.0000, 0.3333, 0.3333]], [[0.0, 0.0, 0.0], [1.0, 1.0, -1.0]], [[0.0,0.0,0.0],[-1.000,-0.3333,-0.3333]]])
+    rays = t.tensor(
+        [
+            [[0.0, 0.0, 0.0], [1.0000, 0.3333, 0.3333]],
+            [[0.0, 0.0, 0.0], [1.0, 1.0, -1.0]],
+            [[0.0, 0.0, 0.0], [-1.000, -0.3333, -0.3333]],
+        ]
+    )
     for O, D in rays:
         actual = triangle_ray_intersects(A, B, C, O, D)
         expected = solutions.triangle_ray_intersects(A, B, C, O, D)
