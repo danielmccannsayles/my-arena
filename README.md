@@ -1,3 +1,5 @@
+### TODO: make this presentable in some way. Will use this for displaying code & remove all the clutter. 
+
 My copy of the [ARENA](https://github.com/callummcdougall/ARENA_3.0) materials.
 
 ** I am not associated with the ARENA program in any way - I'm following along with the materials on my own. **
