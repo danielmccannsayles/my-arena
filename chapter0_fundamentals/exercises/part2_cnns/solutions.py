@@ -26,7 +26,12 @@ from tqdm.notebook import tqdm
 # Make sure exercises are in the path
 chapter = "chapter0_fundamentals"
 section = "part2_cnns"
-root_dir = next(p for p in Path.cwd().parents if (p / chapter).exists())
+
+working_dir = Path.cwd()
+root_dir = working_dir if (working_dir / chapter).exists() else None
+if root_dir is None:
+    root_dir = next(p for p in Path.cwd().parents if (p / chapter).exists())
+
 exercises_dir = root_dir / chapter / "exercises"
 section_dir = exercises_dir / section
 if str(exercises_dir) not in sys.path:
@@ -81,7 +86,9 @@ class Linear(nn.Module):
         x: shape (*, in_features)
         Return: shape (*, out_features)
         """
-        x = einops.einsum(x, self.weight, "... in_feats, out_feats in_feats -> ... out_feats")
+        x = einops.einsum(
+            x, self.weight, "... in_feats, out_feats in_feats -> ... out_feats"
+        )
         if self.bias is not None:
             x += self.bias
         return x
@@ -124,7 +131,9 @@ class Flatten(nn.Module):
         return t.reshape(input, shape_left + (shape_middle,) + shape_right)
 
     def extra_repr(self) -> str:
-        return ", ".join([f"{key}={getattr(self, key)}" for key in ["start_dim", "end_dim"]])
+        return ", ".join(
+            [f"{key}={getattr(self, key)}" for key in ["start_dim", "end_dim"]]
+        )
 
 
 # %%
@@ -156,12 +165,18 @@ MNIST_TRANSFORM = transforms.Compose(
 )
 
 
-def get_mnist(trainset_size: int = 10_000, testset_size: int = 1_000) -> tuple[Subset, Subset]:
+def get_mnist(
+    trainset_size: int = 10_000, testset_size: int = 1_000
+) -> tuple[Subset, Subset]:
     """Returns a subset of MNIST training data."""
 
     # Get original datasets, which are downloaded to "chapter0_fundamentals/exercises/data" for future use
-    mnist_trainset = datasets.MNIST(exercises_dir / "data", train=True, download=True, transform=MNIST_TRANSFORM)
-    mnist_testset = datasets.MNIST(exercises_dir / "data", train=False, download=True, transform=MNIST_TRANSFORM)
+    mnist_trainset = datasets.MNIST(
+        exercises_dir / "data", train=True, download=True, transform=MNIST_TRANSFORM
+    )
+    mnist_testset = datasets.MNIST(
+        exercises_dir / "data", train=False, download=True, transform=MNIST_TRANSFORM
+    )
 
     # # Return a subset of the original datasets
     mnist_trainset = Subset(mnist_trainset, indices=range(trainset_size))
@@ -190,7 +205,11 @@ if MAIN:
 
 # %%
 
-device = t.device("mps" if t.backends.mps.is_available() else "cuda" if t.cuda.is_available() else "cpu")
+device = t.device(
+    "mps"
+    if t.backends.mps.is_available()
+    else "cuda" if t.cuda.is_available() else "cpu"
+)
 
 # If this is CPU, we recommend figuring out how to get cuda access (or MPS if you're on a Mac).
 if MAIN:
@@ -258,7 +277,9 @@ def train(args: SimpleMLPTrainingArgs) -> tuple[list[float], SimpleMLP]:
     model = SimpleMLP().to(device)
 
     mnist_trainset, _ = get_mnist()
-    mnist_trainloader = DataLoader(mnist_trainset, batch_size=args.batch_size, shuffle=True)
+    mnist_trainloader = DataLoader(
+        mnist_trainset, batch_size=args.batch_size, shuffle=True
+    )
 
     optimizer = t.optim.Adam(model.parameters(), lr=args.learning_rate)
     loss_list = []
@@ -306,8 +327,12 @@ def train(args: SimpleMLPTrainingArgs) -> tuple[list[float], list[float], Simple
     model = SimpleMLP().to(device)
 
     mnist_trainset, mnist_testset = get_mnist()
-    mnist_trainloader = DataLoader(mnist_trainset, batch_size=args.batch_size, shuffle=True)
-    mnist_testloader = DataLoader(mnist_testset, batch_size=args.batch_size, shuffle=False)
+    mnist_trainloader = DataLoader(
+        mnist_trainset, batch_size=args.batch_size, shuffle=True
+    )
+    mnist_testloader = DataLoader(
+        mnist_testset, batch_size=args.batch_size, shuffle=False
+    )
 
     optimizer = t.optim.Adam(model.parameters(), lr=args.learning_rate)
 
@@ -357,10 +382,17 @@ if MAIN:
     loss_list, accuracy_list, model = train(args)
 
     line(
-        y=[loss_list, [0.1] + accuracy_list],  # we start by assuming a uniform accuracy of 10%
+        y=[
+            loss_list,
+            [0.1] + accuracy_list,
+        ],  # we start by assuming a uniform accuracy of 10%
         use_secondary_yaxis=True,
         x_max=args.epochs * len(mnist_trainset),
-        labels={"x": "Num examples seen", "y1": "Cross entropy loss", "y2": "Test Accuracy"},
+        labels={
+            "x": "Num examples seen",
+            "y1": "Cross entropy loss",
+            "y2": "Test Accuracy",
+        },
         title="SimpleMLP training on MNIST",
         width=800,
     )
@@ -369,7 +401,14 @@ if MAIN:
 
 
 class Conv2d(nn.Module):
-    def __init__(self, in_channels: int, out_channels: int, kernel_size: int, stride: int = 1, padding: int = 0):
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: int,
+        stride: int = 1,
+        padding: int = 0,
+    ):
         """
         Same as torch.nn.Conv2d with bias=False.
 
@@ -386,11 +425,16 @@ class Conv2d(nn.Module):
 
         kernel_height = kernel_width = kernel_size
         sf = 1 / np.sqrt(in_channels * kernel_width * kernel_height)
-        self.weight = nn.Parameter(sf * (2 * t.rand(out_channels, in_channels, kernel_height, kernel_width) - 1))
+        self.weight = nn.Parameter(
+            sf
+            * (2 * t.rand(out_channels, in_channels, kernel_height, kernel_width) - 1)
+        )
 
     def forward(self, x: Tensor) -> Tensor:
         """Apply the functional conv2d, which you can import."""
-        return t.nn.functional.conv2d(x, self.weight, stride=self.stride, padding=self.padding)
+        return t.nn.functional.conv2d(
+            x, self.weight, stride=self.stride, padding=self.padding
+        )
 
     def extra_repr(self) -> str:
         keys = ["in_channels", "out_channels", "kernel_size", "stride", "padding"]
@@ -414,11 +458,18 @@ class MaxPool2d(nn.Module):
 
     def forward(self, x: Tensor) -> Tensor:
         """Call the functional version of maxpool2d."""
-        return F.max_pool2d(x, kernel_size=self.kernel_size, stride=self.stride, padding=self.padding)
+        return F.max_pool2d(
+            x, kernel_size=self.kernel_size, stride=self.stride, padding=self.padding
+        )
 
     def extra_repr(self) -> str:
         """Add additional information to the string representation of this class."""
-        return ", ".join([f"{key}={getattr(self, key)}" for key in ["kernel_size", "stride", "padding"]])
+        return ", ".join(
+            [
+                f"{key}={getattr(self, key)}"
+                for key in ["kernel_size", "stride", "padding"]
+            ]
+        )
 
 
 # %%
@@ -490,8 +541,12 @@ class BatchNorm2d(nn.Module):
             mean = x.mean(dim=(0, 2, 3))
             var = x.var(dim=(0, 2, 3), unbiased=False)
             # Updating running mean and variance, in line with PyTorch documentation
-            self.running_mean = (1 - self.momentum) * self.running_mean + self.momentum * mean
-            self.running_var = (1 - self.momentum) * self.running_var + self.momentum * var
+            self.running_mean = (
+                1 - self.momentum
+            ) * self.running_mean + self.momentum * mean
+            self.running_var = (
+                1 - self.momentum
+            ) * self.running_var + self.momentum * var
             self.num_batches_tracked += 1
         else:
             mean = self.running_mean
@@ -506,7 +561,12 @@ class BatchNorm2d(nn.Module):
         return x_affine
 
     def extra_repr(self) -> str:
-        return ", ".join([f"{key}={getattr(self, key)}" for key in ["num_features", "eps", "momentum"]])
+        return ", ".join(
+            [
+                f"{key}={getattr(self, key)}"
+                for key in ["num_features", "eps", "momentum"]
+            ]
+        )
 
 
 if MAIN:
@@ -542,7 +602,9 @@ class ResidualBlock(nn.Module):
         If first_stride is > 1, this means the optional (conv + bn) should be present on the right branch. Declare it second using another `Sequential`.
         """
         super().__init__()
-        is_shape_preserving = (first_stride == 1) and (in_feats == out_feats)  # determines if right branch is identity
+        is_shape_preserving = (first_stride == 1) and (
+            in_feats == out_feats
+        )  # determines if right branch is identity
 
         self.left = Sequential(
             Conv2d(in_feats, out_feats, kernel_size=3, stride=first_stride, padding=1),
@@ -554,7 +616,10 @@ class ResidualBlock(nn.Module):
         self.right = (
             nn.Identity()
             if is_shape_preserving
-            else Sequential(Conv2d(in_feats, out_feats, kernel_size=1, stride=first_stride), BatchNorm2d(out_feats))
+            else Sequential(
+                Conv2d(in_feats, out_feats, kernel_size=1, stride=first_stride),
+                BatchNorm2d(out_feats),
+            )
         )
         self.relu = ReLU()
 
@@ -659,17 +724,27 @@ if MAIN:
     my_resnet = ResNet34()
 
     # (1) Test via helper function `print_param_count`
-    target_resnet = models.resnet34()  # without supplying a `weights` argument, we just initialize with random weights
+    target_resnet = (
+        models.resnet34()
+    )  # without supplying a `weights` argument, we just initialize with random weights
     utils.print_param_count(my_resnet, target_resnet)
 
     # (2) Test via `torchinfo.summary`
-    print("My model:", torchinfo.summary(my_resnet, input_size=(1, 3, 64, 64)), sep="\n")
-    print("\nReference model:", torchinfo.summary(target_resnet, input_size=(1, 3, 64, 64), depth=2), sep="\n")
+    print(
+        "My model:", torchinfo.summary(my_resnet, input_size=(1, 3, 64, 64)), sep="\n"
+    )
+    print(
+        "\nReference model:",
+        torchinfo.summary(target_resnet, input_size=(1, 3, 64, 64), depth=2),
+        sep="\n",
+    )
 
 # %%
 
 
-def copy_weights(my_resnet: ResNet34, pretrained_resnet: models.resnet.ResNet) -> ResNet34:
+def copy_weights(
+    my_resnet: ResNet34, pretrained_resnet: models.resnet.ResNet
+) -> ResNet34:
     """Copy over the weights of `pretrained_resnet` to your resnet."""
 
     # Get the state dictionaries for each model, check they have the same number of parameters & buffers
@@ -680,7 +755,9 @@ def copy_weights(my_resnet: ResNet34, pretrained_resnet: models.resnet.ResNet) -
     # Define a dictionary mapping the names of your parameters / buffers to their values in the pretrained model
     state_dict_to_load = {
         mykey: pretrainedvalue
-        for (mykey, myvalue), (pretrainedkey, pretrainedvalue) in zip(mydict.items(), pretraineddict.items())
+        for (mykey, myvalue), (pretrainedkey, pretrainedvalue) in zip(
+            mydict.items(), pretraineddict.items()
+        )
     }
 
     # Load in this dictionary to your model
@@ -690,7 +767,9 @@ def copy_weights(my_resnet: ResNet34, pretrained_resnet: models.resnet.ResNet) -
 
 
 if MAIN:
-    pretrained_resnet = models.resnet34(weights=models.ResNet34_Weights.IMAGENET1K_V1).to(device)
+    pretrained_resnet = models.resnet34(
+        weights=models.ResNet34_Weights.IMAGENET1K_V1
+    ).to(device)
     my_resnet = copy_weights(my_resnet, pretrained_resnet).to(device)
     print("Weights copied successfully!")
 
@@ -729,14 +808,18 @@ IMAGENET_TRANSFORM = transforms.Compose(
 )
 
 if MAIN:
-    prepared_images = t.stack([IMAGENET_TRANSFORM(img) for img in images], dim=0).to(device)
+    prepared_images = t.stack([IMAGENET_TRANSFORM(img) for img in images], dim=0).to(
+        device
+    )
     assert prepared_images.shape == (len(images), 3, IMAGE_SIZE, IMAGE_SIZE)
 
 # %%
 
 
 @t.inference_mode()
-def predict(model, images: Float[Tensor, "batch rgb h w"]) -> tuple[Float[Tensor, "batch"], Int[Tensor, "batch"]]:
+def predict(
+    model, images: Float[Tensor, "batch rgb h w"]
+) -> tuple[Float[Tensor, "batch"], Int[Tensor, "batch"]]:
     """
     Returns the maximum probability and predicted class for each image, as a tensor of floats and ints respectively.
     """
@@ -751,16 +834,26 @@ if MAIN:
 
     # Check your predictions match those of the pretrained model
     my_probs, my_predictions = predict(my_resnet, prepared_images)
-    pretrained_probs, pretrained_predictions = predict(pretrained_resnet, prepared_images)
+    pretrained_probs, pretrained_predictions = predict(
+        pretrained_resnet, prepared_images
+    )
     assert (my_predictions == pretrained_predictions).all()
-    t.testing.assert_close(my_probs, pretrained_probs, atol=5e-4, rtol=0)  # tolerance of 0.05%
+    t.testing.assert_close(
+        my_probs, pretrained_probs, atol=5e-4, rtol=0
+    )  # tolerance of 0.05%
     print("All predictions match!")
 
     # Print out your predictions, next to the corresponding images
     for i, img in enumerate(images):
         table = Table("Model", "Prediction", "Probability")
-        table.add_row("My ResNet", imagenet_labels[my_predictions[i]], f"{my_probs[i]:.3%}")
-        table.add_row("Reference Model", imagenet_labels[pretrained_predictions[i]], f"{pretrained_probs[i]:.3%}")
+        table.add_row(
+            "My ResNet", imagenet_labels[my_predictions[i]], f"{my_probs[i]:.3%}"
+        )
+        table.add_row(
+            "Reference Model",
+            imagenet_labels[pretrained_predictions[i]],
+            f"{pretrained_probs[i]:.3%}",
+        )
         rprint(table)
         display(img)
 
@@ -776,7 +869,9 @@ class NanModule(nn.Module):
         return t.full_like(x, float("nan"))
 
 
-def hook_check_for_nan_output(module: nn.Module, input: tuple[Tensor], output: Tensor) -> None:
+def hook_check_for_nan_output(
+    module: nn.Module, input: tuple[Tensor], output: Tensor
+) -> None:
     """
     Hook function which detects when the output of a layer is NaN.
     """
@@ -855,8 +950,12 @@ if MAIN:
 
 def get_cifar() -> tuple[datasets.CIFAR10, datasets.CIFAR10]:
     """Returns CIFAR-10 train and test sets."""
-    cifar_trainset = datasets.CIFAR10(exercises_dir / "data", train=True, download=True, transform=IMAGENET_TRANSFORM)
-    cifar_testset = datasets.CIFAR10(exercises_dir / "data", train=False, download=True, transform=IMAGENET_TRANSFORM)
+    cifar_trainset = datasets.CIFAR10(
+        exercises_dir / "data", train=True, download=True, transform=IMAGENET_TRANSFORM
+    )
+    cifar_testset = datasets.CIFAR10(
+        exercises_dir / "data", train=False, download=True, transform=IMAGENET_TRANSFORM
+    )
     return cifar_trainset, cifar_testset
 
 
@@ -873,10 +972,14 @@ class ResNetTrainingArgs:
 from torch.utils.data import Subset
 
 
-def get_cifar_subset(trainset_size: int = 10_000, testset_size: int = 1_000) -> tuple[Subset, Subset]:
+def get_cifar_subset(
+    trainset_size: int = 10_000, testset_size: int = 1_000
+) -> tuple[Subset, Subset]:
     """Returns a subset of CIFAR-10 train and test sets (slicing the first examples from the datasets)."""
     cifar_trainset, cifar_testset = get_cifar()
-    return Subset(cifar_trainset, range(trainset_size)), Subset(cifar_testset, range(testset_size))
+    return Subset(cifar_trainset, range(trainset_size)), Subset(
+        cifar_testset, range(testset_size)
+    )
 
 
 def train(args: ResNetTrainingArgs) -> tuple[list[float], list[float], ResNet34]:
@@ -937,10 +1040,17 @@ if MAIN:
     loss_list, accuracy_list, model = train(args)
 
     line(
-        y=[loss_list, [1 / args.n_classes] + accuracy_list],  # we start by assuming a uniform accuracy of 10%
+        y=[
+            loss_list,
+            [1 / args.n_classes] + accuracy_list,
+        ],  # we start by assuming a uniform accuracy of 10%
         use_secondary_yaxis=True,
         x_max=args.epochs * 10_000,
-        labels={"x": "Num examples seen", "y1": "Cross entropy loss", "y2": "Test Accuracy"},
+        labels={
+            "x": "Num examples seen",
+            "y1": "Cross entropy loss",
+            "y2": "Test Accuracy",
+        },
         title="ResNet Feature Extraction",
         width=800,
     )
@@ -1035,7 +1145,9 @@ if MAIN:
         else:
             actual = test_input.as_strided(size=test_case.size, stride=test_case.stride)
             if (test_case.output != actual).any():
-                print(f"Test {i} failed\n  Expected: {test_case.output}\n  Actual: {actual}")
+                print(
+                    f"Test {i} failed\n  Expected: {test_case.output}\n  Actual: {actual}"
+                )
             else:
                 print(f"Test {i} passed!")
 
@@ -1062,7 +1174,9 @@ if MAIN:
 # %%
 
 
-def as_strided_mv(mat: Float[Tensor, "i j"], vec: Float[Tensor, "j"]) -> Float[Tensor, "i"]:
+def as_strided_mv(
+    mat: Float[Tensor, "i j"], vec: Float[Tensor, "j"]
+) -> Float[Tensor, "i"]:
     """
     Returns the same as `torch.matmul`, using only `as_strided` and `sum` methods.
     """
@@ -1071,7 +1185,9 @@ def as_strided_mv(mat: Float[Tensor, "i j"], vec: Float[Tensor, "j"]) -> Float[T
     strideV = vec.stride()
 
     assert len(sizeM) == 2, f"mat1 should be 2D, not {len(sizeM)}"
-    assert sizeM[1] == sizeV[0], f"mat{list(sizeM)}, vec{list(sizeV)} not compatible for multiplication"
+    assert (
+        sizeM[1] == sizeV[0]
+    ), f"mat{list(sizeM)}, vec{list(sizeV)} not compatible for multiplication"
 
     vec_expanded = vec.as_strided(mat.shape, (0, strideV[0]))
 
@@ -1085,7 +1201,9 @@ if MAIN:
 # %%
 
 
-def as_strided_mm(matA: Float[Tensor, "i j"], matB: Float[Tensor, "j k"]) -> Float[Tensor, "i k"]:
+def as_strided_mm(
+    matA: Float[Tensor, "i j"], matB: Float[Tensor, "j k"]
+) -> Float[Tensor, "i k"]:
     """
     Returns the same as `torch.matmul`, using only `as_strided` and `sum` methods.
     """
@@ -1152,7 +1270,8 @@ if MAIN:
 
 
 def conv1d_minimal(
-    x: Float[Tensor, "batch in_channels width"], weights: Float[Tensor, "out_channels in_channels kernel_width"]
+    x: Float[Tensor, "batch in_channels width"],
+    weights: Float[Tensor, "out_channels in_channels kernel_width"],
 ) -> Float[Tensor, "batch out_channels output_width"]:
     """
     Like torch's conv1d using bias=False and all other keyword arguments left at their default values.
@@ -1202,7 +1321,9 @@ def conv2d_minimal(
 
     x_strided = x.as_strided(size=x_new_shape, stride=x_new_stride)
 
-    return einops.einsum(x_strided, weights, "b ic oh ow kh kw, oc ic kh kw -> b oc oh ow")
+    return einops.einsum(
+        x_strided, weights, "b ic oh ow kh kw, oc ic kh kw -> b oc oh ow"
+    )
 
 
 if MAIN:
@@ -1217,7 +1338,9 @@ def pad1d(
     """Return a new tensor with padding applied to the edges."""
     B, C, W = x.shape
     output = x.new_full(size=(B, C, left + W + right), fill_value=pad_value)
-    output[..., left : left + W] = x  # note we can't use `left:-right`, because `right` might be zero
+    output[..., left : left + W] = (
+        x  # note we can't use `left:-right`, because `right` might be zero
+    )
     return output
 
 
@@ -1238,7 +1361,9 @@ def pad2d(
 ) -> Float[Tensor, "batch in_channels height_padding width_padding"]:
     """Return a new tensor with padding applied to the width & height dimensions."""
     B, C, H, W = x.shape
-    output = x.new_full(size=(B, C, top + H + bottom, left + W + right), fill_value=pad_value)
+    output = x.new_full(
+        size=(B, C, top + H + bottom, left + W + right), fill_value=pad_value
+    )
     output[..., top : top + H, left : left + W] = x
     return output
 
@@ -1322,7 +1447,9 @@ def conv2d(
     stride_h, stride_w = force_pair(stride)
     padding_h, padding_w = force_pair(padding)
 
-    x_padded = pad2d(x, left=padding_w, right=padding_w, top=padding_h, bottom=padding_h, pad_value=0)
+    x_padded = pad2d(
+        x, left=padding_w, right=padding_w, top=padding_h, bottom=padding_h, pad_value=0
+    )
 
     b, ic, h, w = x_padded.shape
     oc, ic2, kh, kw = weights.shape
@@ -1337,7 +1464,9 @@ def conv2d(
     x_new_stride = (s_b, s_ic, s_h * stride_h, s_w * stride_w, s_h, s_w)
     x_strided = x_padded.as_strided(size=x_new_shape, stride=x_new_stride)
 
-    return einops.einsum(x_strided, weights, "b ic oh ow kh kw, oc ic kh kw -> b oc oh ow")
+    return einops.einsum(
+        x_strided, weights, "b ic oh ow kh kw, oc ic kh kw -> b oc oh ow"
+    )
 
 
 if MAIN:
@@ -1363,7 +1492,14 @@ def maxpool2d(
     kh, kw = force_pair(kernel_size)
 
     # Get padded version of x
-    x_padded = pad2d(x, left=padding_w, right=padding_w, top=padding_h, bottom=padding_h, pad_value=-t.inf)
+    x_padded = pad2d(
+        x,
+        left=padding_w,
+        right=padding_w,
+        top=padding_h,
+        bottom=padding_h,
+        pad_value=-t.inf,
+    )
 
     # Calculate output height and width for x
     b, ic, h, w = x_padded.shape
