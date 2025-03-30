@@ -1,4 +1,4 @@
-### TODO: make this presentable in some way. Will use this for displaying code & remove all the clutter. 
+### TODO: make this more presentable. Apologies in advance. 
 
 My copy of the [ARENA](https://github.com/callummcdougall/ARENA_3.0) materials.
 
